@@ -21,20 +21,24 @@ Source Code (MIT): [https://github.com/PerformanceEstimation/PEPit](https://gith
 
 This code comes jointly with the following [`reference`](https://arxiv.org/pdf/2201.04040.pdf):
 
-    B. Goujaud, C. Moucer, F. Glineur, J. Hendrickx, A. Taylor, A. Dieuleveut (2022).
+    B. Goujaud, C. Moucer, F. Glineur, J. Hendrickx, A. Taylor, A. Dieuleveut.
     "PEPit: computer-assisted worst-case analyses of first-order optimization methods in Python."
+     Math. Prog. Comp. 16, 337–367 (2024). https://doi.org/10.1007/s12532-024-00259-7
 
-When using the toolbox in a project, please refer to this note via this Bibtex entry:
+When using the toolbox in a project, please refer to the Bibtex entry:
 
 ```bibtex
-@article{pepit2022,
+@article{pepit2024,
   title={{PEPit}: computer-assisted worst-case analyses of first-order optimization methods in {P}ython},
   author={Goujaud, Baptiste and Moucer, C\'eline and Glineur, Fran\c{c}ois and Hendrickx, Julien and Taylor, Adrien and Dieuleveut, Aymeric},
-  journal={arXiv preprint arXiv:2201.04040},
-  year={2022}
+  journal={Math.~Prog.~Comp.},
+  volume={16},
+  pages={337–367},
+  year={2024},
+  publisher={Springer},
+  doi={https://doi.org/10.1007/s12532-024-00259-7}
 }
 ```
-
 
 ## Demo [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/PerformanceEstimation/PEPit/blob/master/ressources/demo/PEPit_demo.ipynb)
 
