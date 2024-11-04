@@ -2,7 +2,6 @@ import numpy as np
 
 from PEPit.function import Function
 
-
 class ConvexIndicatorFunction(Function):
     """
     The :class:`ConvexIndicatorFunction` class overwrites the `add_class_constraints` method of :class:`Function`,
@@ -10,15 +9,20 @@ class ConvexIndicatorFunction(Function):
 
     Attributes:
         D (float): upper bound on the diameter of the feasible set, possibly set to np.inf
-
-    Convex indicator functions are characterized by a parameter `D`, hence can be instantiated as
+        R (float): upper bound on the radius of the feasible set, possibly set to np.inf
+        center (Point): Center of the feasible set spanned by the radius constraint, possibly set to None.
+    Convex indicator functions are characterized by a parameter `D` (or `R`), hence can be instantiated as
 
     Example:
         >>> from PEPit import PEP
+        >>> from PEPit import Point
         >>> from PEPit.functions import ConvexIndicatorFunction
         >>> problem = PEP()
-        >>> func = problem.declare_function(function_class=ConvexIndicatorFunction, D=1)
-
+        >>> func1 = problem.declare_function(function_class=ConvexIndicatorFunction, D=1)
+        >>> func2 = problem.declare_function(function_class=ConvexIndicatorFunction, R=1)
+        >>> omega = Point()
+        >>> func3 = problem.declare_function(function_class=ConvexIndicatorFunction, R=1, center=omega)
+        
     References:
 
     `[1] A. Taylor, J. Hendrickx, F. Glineur (2017).
@@ -30,6 +34,8 @@ class ConvexIndicatorFunction(Function):
 
     def __init__(self,
                  D=np.inf,
+                 R=np.inf,
+                 center=None,
                  is_leaf=True,
                  decomposition_dict=None,
                  reuse_gradient=False,
@@ -38,6 +44,9 @@ class ConvexIndicatorFunction(Function):
 
         Args:
             D (float): Diameter of the support of self. Default value set to infinity.
+            R (float): Radius of the support of self. Default value set to infinity.
+            center: Center of the feasible set spanned by the radius constraint of self. Default value set to None.
+                    If the value is None, the feasible set is centered on the origin.
             is_leaf (bool): True if self is defined from scratch.
                             False if self is defined as linear combination of leaf.
             decomposition_dict (dict): Decomposition of self as linear combination of leaf :class:`Function` objects.
@@ -56,6 +65,10 @@ class ConvexIndicatorFunction(Function):
 
         # Store the diameter D in an attribute
         self.D = D
+        # Store the radius R in an attribute
+        self.R = R
+        # Store the center in an attribute 
+        self.center = center
 
     @staticmethod
     def set_value_constraint_i(xi, gi, fi):
@@ -91,6 +104,15 @@ class ConvexIndicatorFunction(Function):
         # Diameter constraint
         constraint = ((xi - xj) ** 2 <= self.D ** 2)
 
+        # Radius constraint 
+        if self.R < np.inf:
+            # No self.center provided centers the ball on the origin
+            if self.center is None: 
+                constraint = ((xi)**2 <= self.R ** 2)
+            # Centering the ball on self.center
+            else: 
+                constraint = ((self.center - xi)**2 <= self.R ** 2)
+
         return constraint
 
     def add_class_constraints(self):
@@ -108,7 +130,7 @@ class ConvexIndicatorFunction(Function):
                                                       constraint_name="convexity",
                                                       set_class_constraint_i_j=self.set_convexity_constraint_i_j,
                                                       )
-        if self.D != np.inf:
+        if (self.D != np.inf) or (self.R != np.inf):
             self.add_constraints_from_two_lists_of_points(list_of_points_1=self.list_of_points,
                                                           list_of_points_2=self.list_of_points,
                                                           constraint_name="diameter",
