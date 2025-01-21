@@ -56,6 +56,8 @@ from PEPit.examples.monotone_inclusions_variational_inequalities import \
     wc_accelerated_proximal_point as wc_accelerated_proximal_point_operators
 from PEPit.examples.monotone_inclusions_variational_inequalities import \
     wc_douglas_rachford_splitting as wc_douglas_rachford_splitting_operators
+from PEPit.examples.monotone_inclusions_variational_inequalities import \
+    wc_douglas_rachford_splitting_2 as wc_douglas_rachford_splitting_operators_2
 from PEPit.examples.monotone_inclusions_variational_inequalities import wc_optimal_strongly_monotone_proximal_point as \
     wc_optimal_strongly_monotone_proximal_point_operators
 from PEPit.examples.monotone_inclusions_variational_inequalities import \
@@ -550,6 +552,12 @@ class TestExamplesCVXPY(unittest.TestCase):
         L, mu, alpha, theta = 1, 0.1, 1.3, 0.9
 
         wc, theory = wc_douglas_rachford_splitting_operators(L, mu, alpha, theta, wrapper=self.wrapper, verbose=self.verbose)
+        self.assertAlmostEqual(wc, theory, delta=self.relative_precision * theory)
+
+    def test_douglas_rachford_splitting_operators_2(self):
+        beta, mu, alpha, theta = 1.2, 0.1, 0.3, 1.5
+
+        wc, theory = wc_douglas_rachford_splitting_operators_2(beta, mu, alpha, theta, wrapper=self.wrapper, verbose=self.verbose)
         self.assertAlmostEqual(wc, theory, delta=self.relative_precision * theory)
 
     def test_three_operator_splitting_operators(self):

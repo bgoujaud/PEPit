@@ -1,33 +1,33 @@
 from math import sqrt
 
 from PEPit import PEP
-from PEPit.operators import LipschitzStronglyMonotoneOperator
+from PEPit.operators import CocoerciveOperator
 from PEPit.operators import StronglyMonotoneOperator
 from PEPit.primitive_steps import proximal_step
 
 
-def wc_douglas_rachford_splitting(L, mu, alpha, theta, wrapper="cvxpy", solver=None, verbose=1):
+def wc_douglas_rachford_splitting_2(beta, mu, alpha, theta, wrapper="cvxpy", solver=None, verbose=1):
     """
     Consider the monotone inclusion problem
 
     .. math:: \\mathrm{Find}\\, x:\\, 0\\in Ax + Bx,
 
-    where :math:`A` is :math:`L`-Lipschitz and maximally monotone and :math:`B` is (maximally) :math:`\\mu`-strongly
+    where :math:`A` is :math:`\\beta`-cocoercive and maximally monotone and :math:`B` is (maximally) :math:`\\mu`-strongly
     monotone. We denote by :math:`J_{\\alpha A}` and :math:`J_{\\alpha B}` the resolvents of respectively
     :math:`\\alpha A` and :math:`\\alpha B`.
 
     This code computes a worst-case guarantee for the **Douglas-Rachford splitting** (DRS).
     That is, given two initial points :math:`w^{(0)}_t` and :math:`w^{(1)}_t`,
-    this code computes the smallest possible :math:`\\tau(L, \\mu, \\alpha, \\theta)`
+    this code computes the smallest possible :math:`\\tau(\\beta, \\mu, \\alpha, \\theta)`
     (a.k.a. "contraction factor") such that the guarantee
 
-    .. math:: \\|w^{(0)}_{t+1} - w^{(1)}_{t+1}\\|^2 \\leqslant \\tau(L, \\mu, \\alpha, \\theta) \\|w^{(0)}_{t} - w^{(1)}_{t}\\|^2,
+    .. math:: \\|w^{(0)}_{t+1} - w^{(1)}_{t+1}\\|^2 \\leqslant \\tau(\\beta, \\mu, \\alpha, \\theta) \\|w^{(0)}_{t} - w^{(1)}_{t}\\|^2,
 
     is valid, where :math:`w^{(0)}_{t+1}` and :math:`w^{(1)}_{t+1}` are obtained after one iteration of DRS from
     respectively :math:`w^{(0)}_{t}` and :math:`w^{(1)}_{t}`.
 
-    In short, for given values of :math:`L`, :math:`\\mu`, :math:`\\alpha` and :math:`\\theta`, the contraction
-    factor :math:`\\tau(L, \\mu, \\alpha, \\theta)` is computed as the worst-case value of
+    In short, for given values of :math:`\\beta`, :math:`\\mu`, :math:`\\alpha` and :math:`\\theta`, the contraction
+    factor :math:`\\tau(\\beta, \\mu, \\alpha, \\theta)` is computed as the worst-case value of
     :math:`\\|w^{(0)}_{t+1} - w^{(1)}_{t+1}\\|^2` when :math:`\\|w^{(0)}_{t} - w^{(1)}_{t}\\|^2 \\leqslant 1`.
 
     **Algorithm**: One iteration of the Douglas-Rachford splitting is described as follows,
@@ -42,22 +42,16 @@ def wc_douglas_rachford_splitting(L, mu, alpha, theta, wrapper="cvxpy", solver=N
                 w_{t+1} & = & w_t - \\theta (x_{t+1}-y_{t+1}).
             \\end{eqnarray}
 
-    **Theoretical guarantee**: Theoretical worst-case guarantees can be found in [1, section 4, Theorem 4.3].
-    Since the results of [2] tighten that of [1], we compare with [2, Theorem 4.3] below. The theoretical results
-    are complicated and we do not copy them here.
+    **Theoretical guarantee**: Theoretical worst-case guarantees can be found in [1, section 4, Theorem 4.1].
 
-    **References**: The detailed PEP methodology for studying operator splitting is provided in [2].
+    **References**: The detailed PEP methodology for studying operator splitting is provided in [1].
 
-    `[1] W. Moursi, L. Vandenberghe (2019). Douglas–Rachford Splitting for the Sum of a Lipschitz Continuous and
-    a Strongly Monotone Operator. Journal of Optimization Theory and Applications 183, 179–198.
-    <https://arxiv.org/pdf/1805.09396.pdf>`_
-
-    `[2] E. Ryu, A. Taylor, C. Bergeling, P. Giselsson (2020). Operator splitting performance estimation:
+    `[1] E. Ryu, A. Taylor, C. Bergeling, P. Giselsson (2020). Operator splitting performance estimation:
     Tight contraction factors and optimal parameter selection. SIAM Journal on Optimization, 30(3), 2251-2271.
     <https://arxiv.org/pdf/1812.00146.pdf>`_
 
     Args:
-        L (float): the Lipschitz parameter.
+        beta (float): the Lipschitz parameter.
         mu (float): the strongly monotone parameter.
         alpha (float): the step-size in the resolvent.
         theta (float): algorithm parameter.
@@ -75,7 +69,7 @@ def wc_douglas_rachford_splitting(L, mu, alpha, theta, wrapper="cvxpy", solver=N
         theoretical_tau (float): theoretical value.
 
     Example:
-        >>> pepit_tau, theoretical_tau = wc_douglas_rachford_splitting(L=1, mu=.1, alpha=1.3, theta=.9, wrapper="cvxpy", solver=None, verbose=1)
+        >>> pepit_tau, theoretical_tau = wc_douglas_rachford_splitting(beta=1, mu=.1, alpha=1.3, theta=.9, wrapper="cvxpy", solver=None, verbose=1)
         (PEPit) Setting up the problem: size of the Gram matrix: 6x6
         (PEPit) Setting up the problem: performance measure is the minimum of 1 element(s)
         (PEPit) Setting up the problem: Adding initial conditions and general constraints ...
@@ -108,7 +102,7 @@ def wc_douglas_rachford_splitting(L, mu, alpha, theta, wrapper="cvxpy", solver=N
     problem = PEP()
 
     # Declare a monotone operator
-    A = problem.declare_function(LipschitzStronglyMonotoneOperator, L=L, mu=0)
+    A = problem.declare_function(CocoerciveOperator, beta=beta)
     B = problem.declare_function(StronglyMonotoneOperator, mu=mu)
 
     # Then define starting points w0 and w1
@@ -135,23 +129,19 @@ def wc_douglas_rachford_splitting(L, mu, alpha, theta, wrapper="cvxpy", solver=N
     pepit_verbose = max(verbose, 0)
     pepit_tau = problem.solve(wrapper=wrapper, solver=solver, verbose=pepit_verbose)
 
-    # Compute theoretical guarantee (for comparison), see [2, Theorem 4.3]
+    # Compute theoretical guarantee (for comparison), see [1, Theorem 4.1]
     mu = alpha * mu
-    L = alpha * L
-    c = sqrt(((2 * (theta - 1) * mu + theta - 2) ** 2 + L ** 2 * (theta - 2 * (mu + 1)) ** 2) / (L ** 2 + 1))
-    if theta * (theta + c) / (mu + 1) ** 2 / c * (
-            c + mu * ((2 * (theta - 1) * mu + theta - 2) - L ** 2 * (theta - 2 * (mu + 1))) / (L ** 2 + 1)) >= 0:
-        theoretical_tau = ((theta + c) / 2 / (mu + 1)) ** 2
-    elif (L <= 1) & (mu >= (L ** 2 + 1) / (L - 1) ** 2) & (theta <= - (2 * (mu + 1) * (L + 1) *
-                                                                       (mu + (mu - 1) * L ** 2 - 2 * mu * L - 1)) / (
-                                                                   mu + L * (L ** 2 + L + 1) + 2 * mu ** 2 * (L - 1)
-                                                                   + mu * L * (1 - (L - 3) * L) + 1)):
-        theoretical_tau = (1 - theta * (L + mu) / (L + 1) / (mu + 1)) ** 2
-    else:
-        theoretical_tau = (2 - theta) / 4 / mu / (L ** 2 + 1) * (
-                theta * (1 - 2 * mu + L ** 2) - 2 * mu * (L ** 2 - 1)) * \
-                          (theta * (1 + 2 * mu + L ** 2) - 2 * (mu + 1) * (L ** 2 + 1)) / (
-                                  theta * (1 + 2 * mu - L ** 2) - 2 * (mu + 1) * (1 - L ** 2))
+    beta = alpha * beta
+    if mu * beta - mu + beta < 0 and theta <= 2 * ( beta + 1 ) * ( mu - beta - mu * beta ) / ( mu + mu * beta - beta - beta ** 2 - 2 * mu * beta ** 2):
+        theoretical_tau = ( 1 - theta * beta / ( beta + 1 ) ) ** 2
+    elif mu * beta - mu - beta > 0 and theta <=  2 * ( mu ** 2 + beta ** 2 + mu * beta + mu + beta - mu ** 2 * beta ** 2) / (mu ** 2 + beta ** 2 + mu ** 2 * beta + mu * beta ** 2 + mu + beta - 2 * mu ** 2 * beta ** 2):
+        theoretical_tau = ( 1 - theta * ( 1 + mu * beta ) / ( mu + 1 ) / ( beta + 1 ) ) ** 2
+    elif theta >= 2 * ( mu * beta + mu + beta ) / ( 2 * mu * beta + mu + beta ) :
+    	theoretical_tau = ( 1 - theta ) ** 2
+    elif mu * beta + mu - beta < 0 and theta <= 2 * ( mu + 1 ) * ( beta - mu - mu * beta) / ( beta + mu * beta - mu - mu ** 2 - 2 * mu ** 2 * beta ):
+    	theoretical_tau = ( 1 - theta * mu / ( mu + 1 ) ) ** 2
+    else :
+        theoretical_tau = (2 - theta) / 4 / mu * ( ( 2 - theta ) * mu * ( beta + 1 ) + theta * beta * ( 1 - mu ) ) * ( ( 2 - theta ) * beta * ( mu + 1 ) + theta * mu * ( 1 - beta ) ) / mu / beta / ( 2 * mu * beta * ( 1 - theta ) + ( 2 - theta ) * ( mu + beta + 1 ) )
 
     # Print conclusion if required
     if verbose != -1:
@@ -164,6 +154,6 @@ def wc_douglas_rachford_splitting(L, mu, alpha, theta, wrapper="cvxpy", solver=N
 
 
 if __name__ == "__main__":
-    pepit_tau, theoretical_tau = wc_douglas_rachford_splitting(L=1, mu=.1, alpha=1.3, theta=.9,
-                                                               wrapper="cvxpy", solver=None,
-                                                               verbose=1)
+    pepit_tau, theoretical_tau = wc_douglas_rachford_splitting_2(beta=1.2, mu=.1, alpha=.3, theta=1.5,
+                                                                 wrapper="cvxpy", solver=None,
+                                                                 verbose=1)
